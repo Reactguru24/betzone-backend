@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.env.local
+bin/
+vendor/
+.DS_Store
+.vscode
+.idea
+*.test
+*.out
+Makefile
+README.md
+Dockerfile
+.dockerignore
