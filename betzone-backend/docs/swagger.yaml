@@ -1,0 +1,452 @@
+definitions:
+  models.ApiResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  models.AuthResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+      success:
+        type: boolean
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+    type: object
+  models.Bet:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      game_id:
+        type: string
+      id:
+        type: string
+      odds_value:
+        type: number
+      status:
+        description: pending, won, lost, cancelled
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.BetkraftGame:
+    properties:
+      currency:
+        type: string
+      currency_list:
+        type: string
+      date:
+        type: string
+      denomination: {}
+      game_id:
+        type: integer
+      game_name:
+        type: string
+      game_uuid:
+        type: string
+      id:
+        type: integer
+      logo:
+        type: string
+      maximum_stake:
+        type: string
+      maximum_win:
+        type: string
+      minimum_stake:
+        type: string
+      partner_id:
+        type: integer
+      status:
+        type: integer
+      thumbnail:
+        type: string
+    type: object
+  models.BetkraftGameData:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.BetkraftGame'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  models.BetkraftGameResponse:
+    properties:
+      data:
+        $ref: '#/definitions/models.BetkraftGameData'
+      status_code:
+        type: integer
+      status_description:
+        type: string
+    type: object
+  models.ErrorResponse:
+    properties:
+      error: {}
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  models.LaunchGameRequest:
+    properties:
+      balance:
+        type: number
+      currency:
+        type: string
+      demo:
+        type: integer
+      game_uuid:
+        type: string
+      player_id:
+        type: string
+      player_name:
+        type: string
+      player_token:
+        type: string
+    required:
+    - balance
+    - currency
+    - demo
+    - game_uuid
+    - player_id
+    - player_name
+    - player_token
+    type: object
+  models.LaunchGameResponse:
+    properties:
+      data:
+        $ref: '#/definitions/models.LaunchGameResponseData'
+      status_code:
+        type: integer
+      status_description:
+        type: string
+    type: object
+  models.LaunchGameResponseData:
+    properties:
+      url:
+        type: string
+    type: object
+  models.SigninRequest:
+    properties:
+      password:
+        type: string
+      phone:
+        type: string
+    required:
+    - password
+    - phone
+    type: object
+  models.SignupRequest:
+    properties:
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      phone:
+        type: string
+    required:
+    - first_name
+    - last_name
+    - password
+    - phone
+    type: object
+  models.User:
+    properties:
+      balance:
+        type: number
+      created_at:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      last_name:
+        type: string
+      phone:
+        type: string
+      status:
+        description: active, inactive, suspended
+        type: string
+      updated_at:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /api/v1/auth/signin:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.SigninRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Login user
+      tags:
+      - Auth
+  /api/v1/auth/signup:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account
+      parameters:
+      - description: Signup details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.SignupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Auth
+  /api/v1/bets:
+    get:
+      description: Retrieve all bets for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ApiResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get user bets
+      tags:
+      - Bets
+    post:
+      consumes:
+      - application/json
+      description: Place a new bet on a game (requires authentication)
+      parameters:
+      - description: Bet details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Bet'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.ApiResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new bet
+      tags:
+      - Bets
+  /api/v1/bets/{id}:
+    get:
+      description: Retrieve detailed information about a specific bet
+      parameters:
+      - description: Bet ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ApiResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get a bet by ID
+      tags:
+      - Bets
+  /api/v1/games:
+    get:
+      description: Fetch a paginated list of games from Betkraft API
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - default: 1
+        description: Game status
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.BetkraftGameResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get all games
+      tags:
+      - Games
+  /api/v1/games/{id}:
+    get:
+      description: Retrieve detailed information about a specific game
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ApiResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get a game by ID
+      tags:
+      - Games
+  /api/v1/launch:
+    post:
+      consumes:
+      - application/json
+      description: Get a game launch URL for a specific player
+      parameters:
+      - description: Game launch details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.LaunchGameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.LaunchGameResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Launch a game
+      tags:
+      - Games
+  /api/v1/odds/{gameId}:
+    get:
+      description: Retrieve all available odds for a specific game
+      parameters:
+      - description: Game ID
+        in: path
+        name: gameId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ApiResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get game odds
+      tags:
+      - Odds
+  /health:
+    get:
+      description: Check if the API is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check
+      tags:
+      - Health
+swagger: "2.0"

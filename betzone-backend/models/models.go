@@ -2,6 +2,42 @@ package models
 
 import "time"
 
+// User represents a user account
+type User struct {
+	ID        string    `gorm:"primaryKey" json:"id"`
+	Phone     string    `gorm:"uniqueIndex;varchar(20)" json:"phone"`
+	Password  string    `gorm:"varchar(255)" json:"-"` // Never return password in JSON
+	FirstName string    `gorm:"varchar(100)" json:"first_name"`
+	LastName  string    `gorm:"varchar(100)" json:"last_name"`
+	Balance   float64   `gorm:"default:0" json:"balance"`
+	Status    string    `gorm:"varchar(50);default:'active'" json:"status"` // active, inactive, suspended
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+}
+
+// SignupRequest is the payload for user registration
+type SignupRequest struct {
+	Phone     string `json:"phone" binding:"required,len=10"`
+	Password  string `json:"password" binding:"required,min=6"`
+	FirstName string `json:"first_name" binding:"required"`
+	LastName  string `json:"last_name" binding:"required"`
+}
+
+// SigninRequest is the payload for user login
+type SigninRequest struct {
+	Phone    string `json:"phone" binding:"required,len=10"`
+	Password string `json:"password" binding:"required"`
+}
+
+// AuthResponse is returned after successful sign up or sign in
+type AuthResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Token   string `json:"token,omitempty"`
+	User    *User  `json:"user,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
 type Game struct {
 	ID          string    `json:"id"`
 	UUID        string    `json:"uuid"`

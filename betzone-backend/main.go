@@ -4,10 +4,13 @@ import (
 	"log"
 
 	"github.com/betzone/backend/config"
+	_ "github.com/betzone/backend/docs"
 	"github.com/betzone/backend/handlers"
 	"github.com/betzone/backend/services"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -33,6 +36,22 @@ func main() {
 	// Initialize BetkraftService
 	betkraftService := services.NewBetkraftService(cfg)
 
+	// Initialize Database Service
+	log.Println("Connecting to MySQL database...")
+	dbService, err := services.NewDatabaseService(cfg.GetDatabaseDSN())
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer dbService.Close()
+
+	// Run database migrations
+	if err := dbService.Migrate(); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
+	// Initialize AuthService with database and config
+	authService := services.NewAuthServiceWithConfig(cfg, dbService.DB)
+
 	// Set Gin mode
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -46,7 +65,10 @@ func main() {
 	router.Use(corsMiddleware())
 
 	// Register routes
-	registerRoutes(router, betkraftService)
+	registerRoutes(router, betkraftService, authService)
+
+	// Setup Swagger
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Start server
 	log.Printf("Starting server on port %s", cfg.Port)
@@ -55,13 +77,24 @@ func main() {
 	}
 }
 
-func registerRoutes(router *gin.Engine, betkraftService *services.BetkraftService) {
+func registerRoutes(router *gin.Engine, betkraftService *services.BetkraftService, authService *services.AuthService) {
 	// Health check
 	router.GET("/health", handlers.HealthHandler)
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
+		// Authentication routes (no auth required)
+		auth := v1.Group("/auth")
+		{
+			auth.POST("/signup", func(c *gin.Context) {
+				handlers.SignupHandler(c, authService)
+			})
+			auth.POST("/signin", func(c *gin.Context) {
+				handlers.SigninHandler(c, authService)
+			})
+		}
+
 		// Games
 		v1.GET("/games", func(c *gin.Context) {
 			handlers.GetGamesHandler(c, betkraftService)
@@ -71,13 +104,40 @@ func registerRoutes(router *gin.Engine, betkraftService *services.BetkraftServic
 			handlers.LaunchGameHandler(c, betkraftService)
 		})
 
-		// Bets
-		v1.POST("/bets", handlers.CreateBetHandler)
-		v1.GET("/bets", handlers.GetBetsHandler)
-		v1.GET("/bets/:id", handlers.GetBetByIDHandler)
+		// Protected routes (require authentication)
+		protected := v1.Group("")
+		protected.Use(handlers.AuthMiddleware(authService))
+		{
+			// User profile
+			protected.GET("/auth/profile", func(c *gin.Context) {
+				handlers.GetProfileHandler(c, authService)
+			})
+
+			// Bets
+			protected.POST("/bets", handlers.CreateBetHandler)
+			protected.GET("/bets", handlers.GetBetsHandler)
+			protected.GET("/bets/:id", handlers.GetBetByIDHandler)
+		}
 
 		// Odds
 		v1.GET("/odds/:gameId", handlers.GetOddsHandler)
+
+		// Callback routes (from Betkraft provider)
+		callbacks := v1.Group("/callbacks")
+		{
+			callbacks.POST("/player_info", func(c *gin.Context) {
+				handlers.PlayerInfoCallback(c, authService)
+			})
+			callbacks.POST("/bet", func(c *gin.Context) {
+				handlers.BetCallback(c, authService)
+			})
+			callbacks.POST("/win", func(c *gin.Context) {
+				handlers.WinCallback(c, authService)
+			})
+			callbacks.POST("/rollback", func(c *gin.Context) {
+				handlers.RollbackCallback(c, authService)
+			})
+		}
 	}
 }
 
