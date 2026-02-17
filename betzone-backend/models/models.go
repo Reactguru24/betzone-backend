@@ -10,6 +10,7 @@ type User struct {
 	FirstName string    `gorm:"varchar(100)" json:"first_name"`
 	LastName  string    `gorm:"varchar(100)" json:"last_name"`
 	Balance   float64   `gorm:"default:0" json:"balance"`
+	Currency  string    `gorm:"varchar(10);default:'KES'" json:"currency"`
 	Status    string    `gorm:"varchar(50);default:'active'" json:"status"` // active, inactive, suspended
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
@@ -60,14 +61,28 @@ type Odds struct {
 }
 
 type Bet struct {
-	ID        string    `json:"id"`
+	ID        string    `gorm:"primaryKey" json:"id"`
 	UserID    string    `json:"user_id"`
 	GameID    string    `json:"game_id"`
 	Amount    float64   `json:"amount"`
 	OddsValue float64   `json:"odds_value"`
-	Status    string    `json:"status"` // pending, won, lost, cancelled
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Status    string    `gorm:"varchar(50)" json:"status"` // pending, processing, won, lost, rolled_back, cancelled
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+}
+
+// Transaction represents a balance transaction (debit or credit)
+type Transaction struct {
+	ID            string    `gorm:"primaryKey" json:"id"`
+	UserID        string    `json:"user_id"`
+	BetID         string    `json:"bet_id"`
+	Type          string    `gorm:"varchar(50)" json:"type"` // bet_placed, bet_won, bet_lost, rollback
+	Amount        float64   `json:"amount"`                  // Positive for credit, negative for debit
+	BalanceBefore float64   `json:"balance_before"`
+	BalanceAfter  float64   `json:"balance_after"`
+	Description   string    `gorm:"varchar(255)" json:"description"`
+	Status        string    `gorm:"varchar(50)" json:"status"` // completed, failed, pending
+	CreatedAt     time.Time `gorm:"autoCreateTime" json:"created_at"`
 }
 
 type ApiResponse struct {
@@ -124,7 +139,7 @@ type LaunchGameRequest struct {
 	GameUUID    string  `json:"game_uuid" binding:"required"`
 	Currency    string  `json:"currency" binding:"required"`
 	Balance     float64 `json:"balance" binding:"required"`
-	Demo        int     `json:"demo" binding:"required"`
+	Demo        int     `json:"demo"`
 }
 
 type LaunchGameResponse struct {

@@ -9,12 +9,19 @@ import (
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func GenerateSignature(timestamp string, secret string) string {
 	data := fmt.Sprintf("%s%s", timestamp, secret)
 	hash := sha256.Sum256([]byte(data))
 	return fmt.Sprintf("%x", hash)
+}
+
+// GenerateUUID generates a new UUID v4
+func GenerateUUID() string {
+	return uuid.New().String()
 }
 
 func GetTimestamp() string {

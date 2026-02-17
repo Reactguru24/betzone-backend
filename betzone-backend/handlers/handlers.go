@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/betzone/backend/models"
 	"github.com/betzone/backend/services"
+	"github.com/betzone/backend/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -80,7 +83,7 @@ func GetGameByIDHandler(c *gin.Context) {
 
 // CreateBetHandler creates a new bet
 // @Summary Create a new bet
-// @Description Place a new bet on a game (requires authentication)
+// @Description Place a new bet on a casino game (requires authentication)
 // @Tags Bets
 // @Accept json
 // @Produce json
@@ -89,10 +92,10 @@ func GetGameByIDHandler(c *gin.Context) {
 // @Success 201 {object} models.ApiResponse
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 401 {object} models.ErrorResponse
+// @Failure 402 {object} models.ErrorResponse
 // @Router /api/v1/bets [post]
 func CreateBetHandler(c *gin.Context) {
 	var bet models.Bet
-	// TODO: Implement creating a bet
 	if err := c.ShouldBindJSON(&bet); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Success: false,
@@ -101,9 +104,54 @@ func CreateBetHandler(c *gin.Context) {
 		})
 		return
 	}
+
+	// Get user ID from context (set by auth middleware)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Success: false,
+			Message: "User not authenticated",
+		})
+		return
+	}
+
+	bet.UserID = userID.(string)
+
+	// Validate bet amount
+	if bet.Amount <= 0 {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Message: "Bet amount must be greater than 0",
+		})
+		return
+	}
+
+	if bet.GameID == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Message: "Game ID is required",
+		})
+		return
+	}
+
+	// TODO: Fetch user from database and check balance
+	// For now, assume balance check passes
+	// In production:
+	// - Check user balance >= bet.Amount
+	// - If not, return 402 (Payment Required)
+	// - Deduct bet.Amount from user balance
+	// - Store bet in database with status="pending"
+	// - Call Betkraft API to place the bet with proper signature
+	// - If Betkraft returns error, rollback balance deduction
+
+	bet.ID = utils.GenerateUUID() // Generate unique bet ID
+	bet.Status = "pending"
+	bet.CreatedAt = time.Now()
+	bet.UpdatedAt = time.Now()
+
 	c.JSON(http.StatusCreated, models.ApiResponse{
 		Success: true,
-		Message: "Bet created successfully",
+		Message: "Bet placed successfully",
 		Data:    bet,
 	})
 }
@@ -186,6 +234,7 @@ func LaunchGameHandler(c *gin.Context, betkraftService *services.BetkraftService
 	var launchReq models.LaunchGameRequest
 
 	if err := c.ShouldBindJSON(&launchReq); err != nil {
+		log.Printf("[LaunchGameHandler] Validation error: %v", err)
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Success: false,
 			Message: "Invalid request body",
@@ -193,6 +242,9 @@ func LaunchGameHandler(c *gin.Context, betkraftService *services.BetkraftService
 		})
 		return
 	}
+
+	log.Printf("[LaunchGameHandler] Parsed request - PlayerID: %s, PlayerName: %s, GameUUID: %s, Balance: %f, Demo: %d",
+		launchReq.PlayerID, launchReq.PlayerName, launchReq.GameUUID, launchReq.Balance, launchReq.Demo)
 
 	// Launch game with Betkraft API
 	response, err := betkraftService.LaunchGame(&launchReq)

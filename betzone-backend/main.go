@@ -65,7 +65,7 @@ func main() {
 	router.Use(corsMiddleware())
 
 	// Register routes
-	registerRoutes(router, betkraftService, authService)
+	registerRoutes(router, betkraftService, authService, dbService)
 
 	// Setup Swagger
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -77,7 +77,7 @@ func main() {
 	}
 }
 
-func registerRoutes(router *gin.Engine, betkraftService *services.BetkraftService, authService *services.AuthService) {
+func registerRoutes(router *gin.Engine, betkraftService *services.BetkraftService, authService *services.AuthService, dbService *services.DatabaseService) {
 	// Health check
 	router.GET("/health", handlers.HealthHandler)
 
@@ -126,16 +126,16 @@ func registerRoutes(router *gin.Engine, betkraftService *services.BetkraftServic
 		callbacks := v1.Group("/callbacks")
 		{
 			callbacks.POST("/player_info", func(c *gin.Context) {
-				handlers.PlayerInfoCallback(c, authService)
+				handlers.PlayerInfoCallback(c, authService, dbService)
 			})
 			callbacks.POST("/bet", func(c *gin.Context) {
-				handlers.BetCallback(c, authService)
+				handlers.BetCallback(c, authService, dbService)
 			})
 			callbacks.POST("/win", func(c *gin.Context) {
-				handlers.WinCallback(c, authService)
+				handlers.WinCallback(c, authService, dbService)
 			})
 			callbacks.POST("/rollback", func(c *gin.Context) {
-				handlers.RollbackCallback(c, authService)
+				handlers.RollbackCallback(c, authService, dbService)
 			})
 		}
 	}
