@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 
 	"github.com/betzone/backend/config"
 	_ "github.com/betzone/backend/docs"
@@ -72,7 +73,12 @@ func main() {
 
 	// Start server
 	log.Printf("Starting server on port %s", cfg.Port)
-	if err := router.Run(":" + cfg.Port); err != nil {
+	server := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: router,
+	}
+
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
@@ -115,7 +121,7 @@ func registerRoutes(router *gin.Engine, betkraftService *services.BetkraftServic
 
 			// Bets
 			protected.POST("/bets", handlers.CreateBetHandler)
-			protected.GET("/bets", handlers.GetBetsHandler)
+			protected.GET("/bets", func(c *gin.Context) { handlers.GetBetsHandler(c, dbService) })
 			protected.GET("/bets/:id", handlers.GetBetByIDHandler)
 		}
 
@@ -147,9 +153,9 @@ func middlewareLogger() gin.HandlerFunc {
 
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Origin", c.Request.Header.Get("Origin"))
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, x-api-key, x-timestamp, x-signature-key")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, x-api-key, x-timestamp, x-signature-key, Upgrade, Connection")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
 
 		if c.Request.Method == "OPTIONS" {

@@ -249,9 +249,15 @@ paths:
       - Auth
   /api/v1/bets:
     get:
-      description: Retrieve all bets for the authenticated user
+      description: Retrieve all bets for the authenticated user. Optionally filter by category/status.
       produces:
       - application/json
+      parameters:
+      - name: category
+        in: query
+        description: Filter bets by status/category (e.g. 'won', 'lost', 'pending')
+        required: false
+        type: string
       responses:
         "200":
           description: OK

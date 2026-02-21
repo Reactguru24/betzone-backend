@@ -2,6 +2,7 @@ package utils
 
 import (
 	"crypto/md5"
+	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -17,6 +18,23 @@ func GenerateSignature(timestamp string, secret string) string {
 	data := fmt.Sprintf("%s%s", timestamp, secret)
 	hash := sha256.Sum256([]byte(data))
 	return fmt.Sprintf("%x", hash)
+}
+
+// GenerateCallbackToken generates the dynamic token for callback validation
+// token = hex(MD5(hex(SHA1(appKey + timestamp))))
+func GenerateCallbackToken(appKey, timestamp string) string {
+	// Step 1: Concatenate App Key and Timestamp
+	concatenated := appKey + timestamp
+
+	// Step 2: Generate SHA-1 hash and convert to hex
+	sha1Hash := sha1.Sum([]byte(concatenated))
+	sha1Hex := hex.EncodeToString(sha1Hash[:])
+
+	// Step 3: Generate MD5 hash of the SHA-1 hex string
+	md5Hash := md5.Sum([]byte(sha1Hex))
+	token := hex.EncodeToString(md5Hash[:])
+
+	return token
 }
 
 // GenerateUUID generates a new UUID v4

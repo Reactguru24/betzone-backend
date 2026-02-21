@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/betzone/backend/config"
@@ -14,7 +15,8 @@ import (
 
 type AuthService struct {
 	jwtSecret string
-	tokenKey  string // Betkraft token key for callback validation
+	appKey    string // Betkraft app key for generating callback tokens
+	tokenKey  string // Legacy: Betkraft token key for callback validation
 	db        *gorm.DB
 }
 
@@ -28,6 +30,7 @@ type CustomClaims struct {
 func NewAuthService(jwtSecret string, db *gorm.DB) *AuthService {
 	return &AuthService{
 		jwtSecret: jwtSecret,
+		appKey:    "", // Will be set later
 		tokenKey:  "", // Will be set later
 		db:        db,
 	}
@@ -37,9 +40,15 @@ func NewAuthService(jwtSecret string, db *gorm.DB) *AuthService {
 func NewAuthServiceWithConfig(cfg *config.Config, db *gorm.DB) *AuthService {
 	return &AuthService{
 		jwtSecret: cfg.JWTSecret,
-		tokenKey:  cfg.BetkraftAppKey, // Use AppKey as tokenKey for callback validation
+		appKey:    cfg.BetkraftAppKey,   // App key for generating callback tokens
+		tokenKey:  cfg.BetkraftTokenKey, // Legacy: static token key (if used)
 		db:        db,
 	}
+}
+
+// GetAppKey returns the Betkraft app key
+func (as *AuthService) GetAppKey() string {
+	return as.appKey
 }
 
 // GetTokenKey returns the Betkraft token key for callback validation
@@ -81,14 +90,17 @@ func (as *AuthService) Signup(req *models.SignupRequest) (*models.User, string, 
 		return nil, "", err
 	}
 
-	// Create user
+	// Generate unique user ID
+	userID := generateUniqueUserID(as.db)
+
+	// Create user with 500 KES initial balance
 	user := models.User{
-		ID:        generateUserID(),
+		ID:        userID,
 		Phone:     req.Phone,
 		Password:  hashedPassword,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
-		Balance:   0,
+		Balance:   500, // 500 KES welcome bonus
 		Status:    "active",
 	}
 
@@ -207,7 +219,25 @@ func (as *AuthService) UpdateUserBalance(userID string, amount float64) error {
 	return nil
 }
 
-// generateUserID generates a UUID-like user ID
+// generateUserID generates a random 5-digit user ID (not guaranteed unique)
 func generateUserID() string {
-	return fmt.Sprintf("user_%d", time.Now().UnixNano())
+	return fmt.Sprintf("%05d", rand.Intn(100000))
+}
+
+// generateUniqueUserID generates a unique 5-digit random user ID by checking the database
+func generateUniqueUserID(db *gorm.DB) string {
+	for {
+		userID := generateUserID()
+
+		// Check if this ID already exists
+		var existingUser models.User
+		if result := db.Where("id = ?", userID).First(&existingUser); result.Error == gorm.ErrRecordNotFound {
+			// ID doesn't exist, we can use it
+			return userID
+		} else if result.Error != nil {
+			// Database error, log it but continue trying
+			fmt.Printf("Database error checking ID uniqueness: %v\n", result.Error)
+		}
+		// ID exists or there was an error, try again
+	}
 }

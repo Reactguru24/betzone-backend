@@ -6,13 +6,14 @@ import (
 )
 
 type Config struct {
-	Port            string
-	Environment     string
-	BetkraftBaseURL string
-	BetkraftAPIKey  string
-	BetkraftAppKey  string
-	JWTSecret       string
-	CallbackURL     string // e.g., "http://localhost:8080/api/v1/callbacks"
+	Port             string
+	Environment      string
+	BetkraftBaseURL  string
+	BetkraftAPIKey   string
+	BetkraftAppKey   string
+	BetkraftTokenKey string
+	JWTSecret        string
+	CallbackURL      string // e.g., "http://localhost:8080/api/v1/callbacks"
 	// Database configuration
 	DBHost     string
 	DBPort     string
@@ -23,18 +24,19 @@ type Config struct {
 
 func LoadConfig() (*Config, error) {
 	return &Config{
-		Port:            getEnv("PORT", "8080"),
-		Environment:     getEnv("ENVIRONMENT", "development"),
-		BetkraftBaseURL: getEnv("BETKRAFT_BASE_URL", "https://api.staging.betkraft.co.uk"),
-		BetkraftAPIKey:  getEnv("API_KEY", ""),
-		BetkraftAppKey:  getEnv("APP_KEY", ""),
-		JWTSecret:       getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
-		CallbackURL:     getEnv("CALLBACK_URL", "http://localhost:8080/api/v1/callbacks"),
-		DBHost:          getEnv("DB_HOST", "localhost"),
-		DBPort:          getEnv("DB_PORT", "3306"),
-		DBUser:          getEnv("DB_USER", "betzone"),
-		DBPassword:      getEnv("DB_PASSWORD", ""),
-		DBName:          getEnv("DB_NAME", "betzone"),
+		Port:             getEnv("PORT", "8080"),
+		Environment:      getEnv("ENVIRONMENT", "development"),
+		BetkraftBaseURL:  getEnv("BETKRAFT_BASE_URL", "https://api.staging.betkraft.co.uk"),
+		BetkraftAPIKey:   getEnv("API_KEY", ""),
+		BetkraftAppKey:   getEnv("APP_KEY", ""),
+		BetkraftTokenKey: getEnv("TOKEN_KEY", ""),
+		JWTSecret:        getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
+		CallbackURL:      getEnv("CALLBACK_URL", "http://localhost:8080/api/v1/callbacks"),
+		DBHost:           getEnv("DB_HOST", "localhost"),
+		DBPort:           getEnv("DB_PORT", "3306"),
+		DBUser:           getEnv("DB_USER", "betzone"),
+		DBPassword:       getEnv("DB_PASSWORD", ""),
+		DBName:           getEnv("DB_NAME", "betzone"),
 	}, nil
 }
 

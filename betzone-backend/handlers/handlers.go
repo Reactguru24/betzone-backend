@@ -165,9 +165,33 @@ func CreateBetHandler(c *gin.Context) {
 // @Success 200 {object} models.ApiResponse
 // @Failure 401 {object} models.ErrorResponse
 // @Router /api/v1/bets [get]
-func GetBetsHandler(c *gin.Context) {
-	bets := []models.Bet{}
-	// TODO: Implement fetching user bets
+func GetBetsHandler(c *gin.Context, dbService *services.DatabaseService) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Success: false,
+			Message: "Unauthorized: user not found in context",
+			Error:   "user_not_found",
+		})
+		return
+	}
+
+	category := c.Query("category")
+
+	var bets []models.Bet
+	query := dbService.DB.Where("user_id = ?", userID)
+	if category != "" {
+		query = query.Where("status = ?", category)
+	}
+	if err := query.Order("created_at DESC").Find(&bets).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Success: false,
+			Message: "Failed to fetch bets",
+			Error:   err.Error(),
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, models.ApiResponse{
 		Success: true,
 		Message: "Bets retrieved successfully",

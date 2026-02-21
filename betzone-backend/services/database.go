@@ -139,3 +139,15 @@ func (ds *DatabaseService) GetUserTransactions(userID string) ([]models.Transact
 	}
 	return transactions, nil
 }
+
+// GetTransactionByBetID retrieves a transaction by bet ID
+func (ds *DatabaseService) GetTransactionByBetID(betID string) (*models.Transaction, error) {
+	var transaction models.Transaction
+	if err := ds.DB.Where("bet_id = ?", betID).First(&transaction).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil // Not found is not an error, just return nil
+		}
+		return nil, fmt.Errorf("error fetching transaction: %v", err)
+	}
+	return &transaction, nil
+}
