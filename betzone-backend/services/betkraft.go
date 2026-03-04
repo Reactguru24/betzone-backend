@@ -106,6 +106,33 @@ func (bs *BetkraftService) LaunchGame(launchReq *models.LaunchGameRequest) (*mod
 	return &response, nil
 }
 
+func (bs *BetkraftService) QueryBetStatus(gameUUID string, betIDs string) (*models.BetStatusResponse, error) {
+	endpoint := fmt.Sprintf("%s/v1/bet/status/%s", bs.baseURL, gameUUID)
+
+	// Add bet_id query parameter
+	queryParams := url.Values{}
+	queryParams.Add("bet_id", betIDs)
+
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	u.RawQuery = queryParams.Encode()
+
+	body, err := bs.doRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response models.BetStatusResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse bet status response: %v", err)
+	}
+
+	fmt.Printf("Successfully queried bet status for game UUID: %s\n", gameUUID)
+	return &response, nil
+}
+
 func (bs *BetkraftService) doRequest(method, endpoint string, payload map[string]interface{}) ([]byte, error) {
 	var req *http.Request
 	var err error

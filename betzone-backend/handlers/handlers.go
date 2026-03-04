@@ -220,6 +220,55 @@ func GetBetByIDHandler(c *gin.Context) {
 	})
 }
 
+// GetBetStatusHandler queries bet status from the provider
+// @Summary Query bet status
+// @Description Query the status of bets from the provider's API
+// @Tags Bets
+// @Produce json
+// @Security Bearer
+// @Param game_uuid path string true "Game UUID"
+// @Param bet_id query string true "Comma-separated bet IDs"
+// @Success 200 {object} models.BetStatusResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/bets/status/{game_uuid} [get]
+func GetBetStatusHandler(c *gin.Context, betkraftService *services.BetkraftService) {
+	gameUUID := c.Param("game_uuid")
+	betID := c.Query("bet_id")
+
+	if gameUUID == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Message: "Game UUID is required",
+			Error:   "game_uuid_missing",
+		})
+		return
+	}
+
+	if betID == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Message: "Bet ID is required",
+			Error:   "bet_id_missing",
+		})
+		return
+	}
+
+	// Query bet status from provider
+	response, err := betkraftService.QueryBetStatus(gameUUID, betID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Success: false,
+			Message: "Failed to query bet status",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	// Return the response
+	c.JSON(http.StatusOK, response)
+}
+
 // GetOddsHandler fetches odds for a game
 // @Summary Get game odds
 // @Description Retrieve all available odds for a specific game
@@ -266,6 +315,25 @@ func LaunchGameHandler(c *gin.Context, betkraftService *services.BetkraftService
 		})
 		return
 	}
+
+	// Get authenticated user (if available)
+	userID, exists := c.Get("user_id")
+	var providerPlayerID string
+	if exists {
+		// Fetch user from DB using AuthService
+		authService, ok := c.MustGet("authService").(*services.AuthService)
+		if ok {
+			user, err := authService.GetUserByID(userID.(string))
+			if err == nil {
+				providerPlayerID = user.ProviderPlayerID
+			}
+		}
+	}
+	// Fallback to request player_id if not found
+	if providerPlayerID == "" {
+		providerPlayerID = launchReq.PlayerID
+	}
+	launchReq.PlayerID = providerPlayerID
 
 	log.Printf("[LaunchGameHandler] Parsed request - PlayerID: %s, PlayerName: %s, GameUUID: %s, Balance: %f, Demo: %d",
 		launchReq.PlayerID, launchReq.PlayerName, launchReq.GameUUID, launchReq.Balance, launchReq.Demo)

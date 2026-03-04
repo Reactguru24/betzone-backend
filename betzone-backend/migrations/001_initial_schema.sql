@@ -1,9 +1,31 @@
 -- Betzone Database Setup Script
 -- Run this script to create the database and initial schema
 
--- Create database
+
 CREATE DATABASE IF NOT EXISTS betzone;
 USE betzone;
+
+
+-- Drop bets.user_id FK if exists (idempotent)
+SET @fk_name := (SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_NAME = 'bets' AND COLUMN_NAME = 'user_id' AND TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL LIMIT 1);
+SET @sql := IF(@fk_name IS NOT NULL, CONCAT('ALTER TABLE bets DROP FOREIGN KEY ', @fk_name), 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Drop transactions.user_id FK if exists (idempotent)
+SET @fk_name := (SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_NAME = 'transactions' AND COLUMN_NAME = 'user_id' AND TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL LIMIT 1);
+SET @sql := IF(@fk_name IS NOT NULL, CONCAT('ALTER TABLE transactions DROP FOREIGN KEY ', @fk_name), 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Drop transactions.bet_id FK if exists (idempotent)
+SET @fk_name := (SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_NAME = 'transactions' AND COLUMN_NAME = 'bet_id' AND TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL LIMIT 1);
+SET @sql := IF(@fk_name IS NOT NULL, CONCAT('ALTER TABLE transactions DROP FOREIGN KEY ', @fk_name), 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (

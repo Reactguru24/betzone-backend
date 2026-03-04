@@ -93,15 +93,19 @@ func (as *AuthService) Signup(req *models.SignupRequest) (*models.User, string, 
 	// Generate unique user ID
 	userID := generateUniqueUserID(as.db)
 
+	// Generate provider player ID (could be numeric, UUID, or mapped from provider)
+	providerPlayerID := userID // For now, use our own userID as provider_player_id
+
 	// Create user with 500 KES initial balance
 	user := models.User{
-		ID:        userID,
-		Phone:     req.Phone,
-		Password:  hashedPassword,
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		Balance:   500, // 500 KES welcome bonus
-		Status:    "active",
+		ID:               userID,
+		ProviderPlayerID: providerPlayerID,
+		Phone:            req.Phone,
+		Password:         hashedPassword,
+		FirstName:        req.FirstName,
+		LastName:         req.LastName,
+		Balance:          500, // 500 KES welcome bonus
+		Status:           "active",
 	}
 
 	// Save user to database

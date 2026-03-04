@@ -6,7 +6,7 @@ import (
 
 	"github.com/betzone/backend/config"
 	_ "github.com/betzone/backend/docs"
-	"github.com/betzone/backend/handlers"
+	"github.com/betzone/backend/routes"
 	"github.com/betzone/backend/services"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -66,7 +66,7 @@ func main() {
 	router.Use(corsMiddleware())
 
 	// Register routes
-	registerRoutes(router, betkraftService, authService, dbService)
+	routes.RegisterRoutes(router, betkraftService, authService, dbService)
 
 	// Setup Swagger
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -80,70 +80,6 @@ func main() {
 
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
-	}
-}
-
-func registerRoutes(router *gin.Engine, betkraftService *services.BetkraftService, authService *services.AuthService, dbService *services.DatabaseService) {
-	// Health check
-	router.GET("/health", handlers.HealthHandler)
-
-	// API v1 routes
-	v1 := router.Group("/api/v1")
-	{
-		// Authentication routes (no auth required)
-		auth := v1.Group("/auth")
-		{
-			auth.POST("/signup", func(c *gin.Context) {
-				handlers.SignupHandler(c, authService)
-			})
-			auth.POST("/signin", func(c *gin.Context) {
-				handlers.SigninHandler(c, authService)
-			})
-		}
-
-		// Games
-		v1.GET("/games", func(c *gin.Context) {
-			handlers.GetGamesHandler(c, betkraftService)
-		})
-		v1.GET("/games/:id", handlers.GetGameByIDHandler)
-		v1.POST("/launch", func(c *gin.Context) {
-			handlers.LaunchGameHandler(c, betkraftService)
-		})
-
-		// Protected routes (require authentication)
-		protected := v1.Group("")
-		protected.Use(handlers.AuthMiddleware(authService))
-		{
-			// User profile
-			protected.GET("/auth/profile", func(c *gin.Context) {
-				handlers.GetProfileHandler(c, authService)
-			})
-
-			// Bets
-			protected.POST("/bets", handlers.CreateBetHandler)
-			protected.GET("/bets", func(c *gin.Context) { handlers.GetBetsHandler(c, dbService) })
-			protected.GET("/bets/:id", handlers.GetBetByIDHandler)
-		}
-
-		// Odds
-		v1.GET("/odds/:gameId", handlers.GetOddsHandler)
-
-		// Callback routes (from Betkraft provider)
-		callbacks := v1.Group("/callbacks")
-		{
-			callbacks.POST("/player_info", func(c *gin.Context) {
-				handlers.PlayerInfoCallback(c, authService, dbService)
-			})
-			callbacks.POST("/bet", func(c *gin.Context) {
-				handlers.BetCallback(c, authService, dbService)
-			})
-			callbacks.POST("/win", func(c *gin.Context) {
-				handlers.WinCallback(c, authService, dbService)
-			})
-			callbacks.POST("/rollback", func(c *gin.Context) {
-				handlers.RollbackCallback(c, authService, dbService)
-			})
-		}
 	}
 }
 

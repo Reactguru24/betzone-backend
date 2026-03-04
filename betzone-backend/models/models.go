@@ -4,16 +4,17 @@ import "time"
 
 // User represents a user account
 type User struct {
-	ID        string    `gorm:"primaryKey" json:"id"`
-	Phone     string    `gorm:"uniqueIndex;varchar(20)" json:"phone"`
-	Password  string    `gorm:"varchar(255)" json:"-"` // Never return password in JSON
-	FirstName string    `gorm:"varchar(100)" json:"first_name"`
-	LastName  string    `gorm:"varchar(100)" json:"last_name"`
-	Balance   float64   `gorm:"default:0" json:"balance"`
-	Currency  string    `gorm:"varchar(10);default:'KES'" json:"currency"`
-	Status    string    `gorm:"varchar(50);default:'active'" json:"status"` // active, inactive, suspended
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	ID               string    `gorm:"primaryKey" json:"id"`
+	Phone            string    `gorm:"uniqueIndex;varchar(20)" json:"phone"`
+	Password         string    `gorm:"varchar(255)" json:"-"` // Never return password in JSON
+	FirstName        string    `gorm:"varchar(100)" json:"first_name"`
+	LastName         string    `gorm:"varchar(100)" json:"last_name"`
+	Balance          float64   `gorm:"default:0" json:"balance"`
+	Currency         string    `gorm:"varchar(10);default:'KES'" json:"currency"`
+	Status           string    `gorm:"varchar(50);default:'active'" json:"status"` // active, inactive, suspended
+	ProviderPlayerID string    `gorm:"varchar(50);uniqueIndex" json:"provider_player_id"`
+	CreatedAt        time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt        time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 // SignupRequest is the payload for user registration
@@ -150,4 +151,24 @@ type LaunchGameResponse struct {
 
 type LaunchGameResponseData struct {
 	URL string `json:"url"`
+}
+
+// Bet Status Models
+
+type BetStatusResponse struct {
+	StatusCode        int         `json:"status_code"`
+	StatusDescription string      `json:"status_description"`
+	Data              []BetStatus `json:"data,omitempty"`
+}
+
+type BetStatus struct {
+	Odds         float64 `json:"odds"`
+	BetAmount    float64 `json:"bet_amount"`
+	PayoutAmount float64 `json:"payout_amount"`
+	TotalGames   int     `json:"total_games"`
+	Status       int     `json:"status"` // 0: pending, 1: won, 2: lost, 3: cancelled, etc.
+	BetID        string  `json:"bet_id"`
+	GameName     string  `json:"game_name"`
+	Currency     string  `json:"currency"`
+	Date         string  `json:"date"`
 }
